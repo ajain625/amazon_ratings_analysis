@@ -1,11 +1,7 @@
-from numpy.lib.type_check import nan_to_num
 import pandas as pd
 import seaborn as sns
-import random
 import matplotlib.pyplot as plt
-import math
 import numpy as np
-import statsmodels.api as sm
 
 def product_data(data):
     """Takes list of lists of lists where each element of the primary list is a list all ratings for a certain product. Each rating is a list of the form 
@@ -45,10 +41,12 @@ def sort_by_products(pandas_dataframe):
     product_sorted_data.append(product_list)
     return product_sorted_data
 
-def rating_data(data):
-    """Takes list of lists of lists where each element of the primary list is a list all ratings for a certain product. Each rating is a list of the form 
-    [productid, rating, timestamp]. Returns a list of lists of the form 
-    [review_number, averageRating, rating, nextRating, final_average_rating, final_average_rating_rounded, timeSinceLast, timeToNext, totalReviews]"""
+def rating_data(data, time_analysis = False):
+    """Takes list of lists of lists where each element of the primary list is a list all ratings for one single product. Each rating is a list of the form 
+    [productid, rating, timestamp]. Returns a pandas dataframe with columns: 
+    ['Review Number', 'Average Rating so far', 'Rating', 'Next Rating', 'Average Product Rating', 'Average Rounded Product Rating', 'Time Since Last Review', 'Time to Next Review', 'Total Product Reviews']
+    if time_analysis = True. Else, returns pandas dataframe with columns:
+    ['Review Number', 'Rating', 'Average Product Rating', 'Average Rounded Product Rating', 'Total Product Reviews']"""
 
     all_data = []
     total_products = len(data)
@@ -62,46 +60,50 @@ def rating_data(data):
             final_average_rating += data[i][j][1]
         
         final_average_rating = final_average_rating/totalReviews 
-        final_average_rating_rounded = round(final_average_rating, 1)      
+        final_average_rating_rounded = round(final_average_rating, 1)
 
-        for j in range(totalReviews):
-            review_number = j+1
-            rating = data[i][j][1]
-            """
-            if j == 0:
-                averageRating = float(data[i][j][1])
-                timeSinceLast = None
-            else:
-                averageRating = (averageRating * (j) + data[i][j][1])/(j+1)
-                timeSinceLast = data[i][j][2] - data[i][j-1][2]
-            
-            if j == totalReviews-1:
-                nextRating = None #or maybe averageRating?
-                timeToNext = None
-            else:
-                nextRating = data[i][j+1][1]
-                timeToNext = data[i][j+1][2] - data[i][j][2]
-            """
-            #dataPoint = [review_number, averageRating, rating, nextRating, final_average_rating, final_average_rating_rounded, timeSinceLast, timeToNext, totalReviews]
-            dataPoint = [review_number,  rating, final_average_rating, final_average_rating_rounded,  totalReviews]
-            all_data.append(dataPoint)
-    return all_data
+        if time_analysis:
+            for j in range(totalReviews):            
+                review_number = j+1
+                rating = data[i][j][1]
+                if j == 0:
+                    averageRating = float(data[i][j][1])
+                    timeSinceLast = None
+                else:
+                    averageRating = (averageRating * (j) + data[i][j][1])/(j+1)
+                    timeSinceLast = data[i][j][2] - data[i][j-1][2]
+                
+                if j == totalReviews-1:
+                    nextRating = None #or maybe averageRating?
+                    timeToNext = None
+                else:
+                    nextRating = data[i][j+1][1]
+                    timeToNext = data[i][j+1][2] - data[i][j][2]
+                dataPoint = [review_number, averageRating, rating, nextRating, final_average_rating, final_average_rating_rounded, timeSinceLast, timeToNext, totalReviews]
+                all_data.append(dataPoint)
 
-#Book 2: around 1 million, Book 1: around 100,000
+        else:
+            for j in range(totalReviews):
+                review_number = j+1
+                rating = data[i][j][1]
+                dataPoint = [review_number,  rating, final_average_rating, final_average_rating_rounded,  totalReviews]
+                all_data.append(dataPoint)
+
+    if time_analysis:
+        return pd.DataFrame(all_data, columns = ('Review Number', 'Average Rating so far', 'Rating', 'Next Rating', 'Average Product Rating', 'Average Rounded Product Rating', 'Time Since Last Review', 'Time to Next Review', 'Total Product Reviews'))
+    else:
+        return pd.DataFrame(all_data, columns = ('Review Number', 'Rating', 'Average Product Rating', 'Average Rounded Product Rating', 'Total Product Reviews'))
+
+
 rawData = pd.read_csv(r"C:\Users\Mona Jain.000\Downloads\Movies_and_TV.csv", delimiter=',')
-#rawData = pd.read_csv(r"C:\Users\Mona Jain.000\Downloads\ratings_Clothing_Shoes_and_Jewelry(1).csv", delimiter=',')
-print(rawData.head())
+#rawData = pd.read_csv(r"C:\Users\Mona Jain.000\Downloads\Clothing_Shoes_and_Jewelry(1).csv", delimiter=',')
+
 product_sorted_data = sort_by_products(rawData)
 
 
 
 #allData = rating_data(product_sorted_data)
 #df = pd.DataFrame(allData, columns = ('Review Number', 'Average Rating so far', 'Rating', 'Next Rating', 'Average Product Rating', 'Average Rounded Product Rating', 'Time Since Last Review', 'Time to Next Review', 'Total Product Reviews'))
-
-# print(df.info())
-#df1 = df.head(10000)
-#print(df1.std())
-#print(df1.mean())
 
 
 # Analysis of initial rating vs the total product reviews
@@ -147,22 +149,21 @@ plt.show()
 
 # Analysis of mean of difference between rating and average rating vs review number
 print(product_sorted_data[:2])
-allData = rating_data(product_sorted_data)
-df = pd.DataFrame(allData, columns = ('Review Number', 'Rating', 'Average Product Rating', 'Average Rounded Product Rating', 'Total Product Reviews'))
+df = rating_data(product_sorted_data)
+#df = pd.DataFrame(allData, columns = ('Review Number', 'Rating', 'Average Product Rating', 'Average Rounded Product Rating', 'Total Product Reviews'))
 df4 = df[df["Total Product Reviews"] > 300]
 print(df.shape)
 print(df4.shape)
 df4["Average - Current Rating"] = df4['Average Product Rating'] - df4['Rating']
-df4["Abs of average - current rating"] = df4["Average - Current Rating"].map(lambda x: abs(x))
-mean_diff= []
-review_num = []
-for i in range(1, 300):
-    rating_data = df4[df4["Review Number"] == i]   
-    mean_diff.append(rating_data["Abs of average - current rating"].mean())
-    review_num.append(i)
+df4["Square of Average - Current Rating"] = df4["Average - Current Rating"].map(lambda x: x**2)
+mean_diff = np.zeros(300)
+review_num = np.arange(1, 301)
+for i in range(300):
+    rating_data = df4[df4["Review Number"] == i+1]   
+    mean_diff[i] = rating_data["Square of Average - Current Rating"].mean()
 
-mean_diff = np.asarray(mean_diff)
-review_num = np.asarray(review_num)
+#mean_diff = np.asarray(mean_diff)
+#review_num = np.asarray(review_num)
 
 m, b = np.polyfit(review_num, mean_diff, 1)
 print(m, b)
@@ -207,15 +208,5 @@ plt.show()
 
 #take averages here? i.e. for all products with 1 review, average rating and so on 
 """
-#print(df2.head)
 
-#sns.scatterplot(data = df2, x = 'Rating', y = 'Total Product Reviews')
-#plt.show()
-#df1 = (df1 - df1.mean())/df1.std()
-#print(df1.corr())
-#sns.pairplot(df1)
-#cmap = sns.diverging_palette(0, 255, as_cmap=True)
-#sns.heatmap(df1.corr(), cmap=cmap)
-#sns.scatterplot(data=df1, x='Time Since Last Review', y ='Time to Next Review')
-#plt.show()
 
