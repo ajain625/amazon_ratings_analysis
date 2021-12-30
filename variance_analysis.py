@@ -8,8 +8,9 @@ import pandas as pd
 
 # Process data to contain all relevant information
 
-raw_data = pd.read_csv(r"C:\Users\Mona Jain.000\Downloads\Movies_and_TV.csv", delimiter=',')
-#raw_data = pd.read_csv(r"C:\Users\Mona Jain.000\Downloads\Clothing_Shoes_and_Jewelry(1).csv", delimiter=',')
+# Fill in with csv file path for analysis
+#raw_data = pd.read_csv(r"", delimiter=',')
+
 
 product_sorted_data = sort_by_products(raw_data)
 rating_df = rating_data(product_sorted_data)
@@ -37,7 +38,7 @@ slope, yintercept = np.polyfit(review_num, mean_diff, 1)
 print(slope, yintercept)
 plt.scatter(review_num, mean_diff)
 plt.plot(review_num,  slope*review_num + yintercept, 'r-')
-plt.title("Variance of Nth Rating")
+plt.title("Variance Analysis")
 plt.xlabel("Rating Number (N)")
 plt.ylabel("Variance of Nth Rating")
 plt.show()
